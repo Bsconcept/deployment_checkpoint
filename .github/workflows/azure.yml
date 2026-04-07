@@ -1,0 +1,51 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  AZURE_WEBAPP_NAME: mern-app-yourname
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  NODE_VERSION: '18.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    
+    - name: Install Backend Dependencies
+      run: npm ci
+      
+    - name: Install Frontend Dependencies
+      run: |
+        cd frontend
+        npm ci
+        cd ..
+    
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm run build
+        cd ..
+    
+    - name: Copy Build to Backend
+      run: |
+        mkdir -p backend/public
+        cp -r frontend/build/* backend/public/
+    
+    - name: 'Deploy to Azure WebApp'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
